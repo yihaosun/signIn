@@ -1,0 +1,212 @@
+*{
+    margin:0;
+    padding:0;
+}
+.backgroundimg{
+    width: calc(100vw);
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: -1;
+}
+.body_wrap{
+    padding-top: 110%;
+}
+.activity_rules_wrap{
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 30px;
+    text-align: right;
+}
+.activity_rules{
+    height: 100%;
+    display: inline-block;
+    width: 80px;
+    background-color: #bd67f8;
+    border-radius: 0px 0px 0px 10px;
+    text-align: center;
+    line-height: 30px;
+    font-size: 0.8rem;
+    box-shadow: 0px 0px 10px 3px #8950b1;
+}
+
+.calendar_outside{
+    width: 80%;
+    margin: 0 auto;
+    border: 12px solid;
+    background-color: #ffdb67;
+    border-radius: 10px;
+    border-image: url(../img/test.png) 50 repeat;
+}
+
+.calendar_wrap{
+    background-color: #ffa200;;
+    padding-top: 10px;
+    border-radius: 10px;
+    
+}
+.calendar{
+    display: flex;
+    flex-wrap: wrap;
+    text-align: center;
+   
+}
+.date_wrap{
+    width: calc(100%/5);
+    text-align: center;
+}
+.data_day{
+    background-color: white !important;
+    height: calc(100vw/8);
+    width: calc(100vw/8);
+    border-radius: 10px;
+    display: inline-block;
+    margin-bottom: 10px;
+    text-align: center;
+    line-height: calc(100vw/5.5);
+    background: url(../img/date.png);
+    background-position-x: -1px;
+    background-size: cover;
+    background-position-y: -4px;
+    font-size: 0.5rem;
+    color: white;
+    font-weight: 100;
+}
+.nodate_day{
+    background-color: white !important;
+    height: calc(100vw/8);
+    width: calc(100vw/8);
+    border-radius: 10px;
+    display: inline-block;
+    margin-bottom: 10px;
+    background: url('../img/noDate.png');
+    background-size: cover;
+}
+.signInBtn{
+    height: 39px;
+    width: 50px;
+    background-color: red;
+}
+.el-message-box {
+   
+    width: 70%!important;
+    
+}
+.btn_wrap{
+    display: flex;
+    margin-top: 35px;
+}
+.flex-1{
+    flex:1;
+    text-align: center
+}
+.support{
+    height: 50px;
+    text-align: center;
+    line-height: 75px;
+    font-size: 10px;
+    color: white;
+    margin-bottom: 15px;
+}
+.el-dialog__body {
+    padding: 0px 20px!important;
+    color: #606266;
+    font-size: 14px;
+}
+.code{
+    width: 100%;
+    height: 100%;
+}
+.spinner {
+    width: 60px;
+    height: 60px;
+   
+    position: relative;
+    margin: 100px auto;
+  }
+   
+  .double-bounce1, .double-bounce2 {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: red;
+    opacity: 0.6;
+    position: absolute;
+    top: 0;
+    left: 0;
+     
+    -webkit-animation: bounce 2.0s infinite ease-in-out;
+    animation: bounce 2.0s infinite ease-in-out;
+  }
+   
+  .double-bounce2 {
+    -webkit-animation-delay: -1.0s;
+    animation-delay: -1.0s;
+  }
+   
+  @-webkit-keyframes bounce {
+    0%, 100% { -webkit-transform: scale(0.0) }
+    50% { -webkit-transform: scale(1.0) }
+  }
+   
+  @keyframes bounce {
+    0%, 100% {
+      transform: scale(0.0);
+      -webkit-transform: scale(0.0);
+    } 50% {
+      transform: scale(1.0);
+      -webkit-transform: scale(1.0);
+    }
+  }
+
+  [v-cloak] {
+    display: none;
+  }
+  .admin_title{
+    text-align: center;
+    line-height: 50px;
+    color: white;
+    font-size: 1.5rem;
+    padding-top: 15px;
+  }
+  .el-dialog__footer {
+    padding: 10px 20px 20px;
+    text-align: center!important;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+.userInfo{
+    width: 100%;
+    color: white;
+    text-align: center;
+    margin-top: 115%; 
+    font-size: 1rem;
+}
+.el-message-box__btns {
+    padding: 5px 15px 0;
+    text-align: center!important;
+}
+.button_style{
+    display: inline-block;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    background:url('../img/button.png');
+    background-size: cover;
+    border: 0px solid #dcdfe6;
+    color: white;
+    -webkit-appearance: none;
+    text-align: center;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    outline: 0;
+    margin: 0;
+    -webkit-transition: .1s;
+    transition: .1s;
+    font-weight: 500;
+    padding: 14px 20px;
+    font-size: 14px;
+    border-radius: 4px; 
+}

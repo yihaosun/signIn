@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>签到查看</title>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0,minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="../css/signIn.css">
+    <link rel="stylesheet" href="../css/element_index.css">
+    
+<body>
+    <div id='admin_wrap' >
+            <div class='spinner' v-if="loading">
+                    <div class="double-bounce1"></div>
+                    <div class="double-bounce2"></div>
+                </div> 
+                <div class='admin_wrap' v-if="!loading" v-cloak >
+                        <img src='../img/bg.png' class="backgroundimg" />
+                        <div class='userInfo'>
+                           <span>签到用户昵称:{{name}}</span>
+                           <span>&nbsp签到用户天数:{{day}}天</span>
+                        </div>
+                        <div style='text-align: center; margin-top: 10px;color:white'><span>签到年月:{{year.substring(0,4)}}年{{year.substring(4)}}月</span></div>
+                        <div class='calendar_outside' style='margin: 5% auto 0%;'>
+                            <div class='calendar_wrap'>
+                                <div class='calendar'>
+                                    <div class='date_wrap' v-for="(item,index) in list" :key="index">
+                                        <div class='data_day' v-if="item=='1'">
+                                            {{index+1}}
+                                        </div>
+                                        <div class='nodate_day' v-else>
+                                        </div>
+                
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+    </div>
+    <script src='../js/vue.js'></script>
+    <script src='../js/axios.min.js'></script>
+    <script src='../js/qs.min.js'></script>
+    <script src='../js/element_index.js'></script>
+    <script>
+        new Vue({
+            el: "#admin_wrap",
+            data: {
+                basePath: "http://www.run4u.cn:1002",
+                loading:true,
+                name:'',
+                day:"",
+                list:'',
+                year:''
+
+            },
+            methods: {
+                 Init() {
+                    // localStorage.setItem('token','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImEyNTc5ZWZlLTAxYjktNGIzZS1hNzFkLTZmZWRkZGJkMDdiNSIsIm5hbWUiOiLmtYvor5UiLCJuYmYiOjE1NTEyMjk5MjIsImV4cCI6MTU1MTMxNjMyMiwiaXNzIjoiRUxZSEciLCJhdWQiOiJodHRwOi8vbG9jYWxob3N0OjUwMDAvIn0.z8GnxdUgWtO9jUns9YdahudqFTpHLdRFLZ8IfX5GmlI')
+                    //token 没有过期
+                    if (this.isAuthenticated()) {
+                        this.getBaseInfo();
+                    } else {
+                        let code = this.getQueryString('code');
+                        this.getOpenId(code);
+                    }
+                },
+                getQueryString: function (name) {
+                    var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+                    var r = window.location.search.substr(1).match(reg);  //获取url中"?"符后的字符串并正则匹配
+                    var context = "";
+                    if (r != null)
+                        context = r[2];
+                    reg = null;
+                    r = null;
+                    return context == null || context == "" || context == "undefined" ? "" : context;
+                },
+                getOpenId(code) {
+                            let useragent = navigator.userAgent.toLowerCase();
+                            if (useragent.match(/micromessenger/i) != null) {
+                                if (!code) {
+                                    //code不存在去获取code
+                                    let currentUrl = encodeURIComponent(window.location.href);
+                                    let state = Math.floor(Math.random() * 10000000000000);
+                                    //放入本地缓存
+                                     localStorage.setItem('state', state);
+                                    //这里的跳转地址要换一下
+                                    window.location.href = `http://www.run4u.cn/get-weixin-code.html?appid=wxc033600ccb6a6abf&redirect_uri=${currentUrl}&response_type=code&scope=snsapi_userinfo&state=${state}#wechat_redirect`;
+                                } else {
+                                    //先通过本地缓存获取state
+                                    let states1 =  localStorage.getItem('state');
+                                    let urlState = this.getQueryString('state');
+                                    if (states1 == urlState) {
+                                        //code存在去获取openid
+                                        this.userLogin(code,  () => {
+                                             this.getBaseInfo();
+                                        })
+                                    }
+                                    else {
+                                        //某些机型无法获取本地，需要重启手机
+                                        //放入本地缓存
+                                        let waring = '警告';
+                                         localStorage.setItem('waring', waring);
+                                        let result =  localStorage.getItem('waring');
+                                        if (result) {
+                                            let baseurl = (window.location.href).split('#')[0].split('?')[0];
+                                            window.location.href = baseurl;
+                                        } else {
+                                            super.showAlert(this.alertCtrl, '手机问题，请重启手机');
+                                        }
+                                    }
+                                }
+                            } else {
+
+                                    this.$alert('请在微信中打开', '警告⚠️', {
+                                        confirmButtonText: '确定',
+                                    });
+                            }
+                },
+                //判断token是否过期
+                isAuthenticated() {
+                    let a = localStorage.getItem("expireAt");
+                    if (a != null && (Number(a)*1000) > (new Date()).valueOf()) {
+                        return localStorage.getItem('token') != null;
+                    } else {
+                        //登录出去，并且删除缓存中的token
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('expireAt');
+                        return false;
+                    }
+                },
+                //基础数据
+                getBaseInfo() {
+                    let day = this.GetQueryString("day");
+                    this.year=day;
+                    let sgin = this.GetQueryString("sgin");
+                    let uid = this.GetQueryString("uid");
+                    let token = localStorage.getItem("token");
+                    axios.get(this.basePath + "/api/UserSgin/gift", {
+                        params: {
+                            // day: '201902',
+                            // uid: 'a2579efe-01b9-4b3e-a71d-6fedddbd07b5',
+                            // sgin: '180c247bef28c321b9b1813b6347165a'
+                            day:day,
+                            uid:uid,
+                            sgin:sgin,
+                           
+
+                        },
+                        headers: {
+                            'Authorization': 'Bearer ' + token,
+                        }
+                    })
+                        .then(o => {
+                            console.log(o)
+                            if (o.data.code == 200) {
+                                this.name=o.data.data.name;
+                                let a = (o.data.data.sginBitMap.match(/1/g) || []).length;
+                                this.day=a;
+                                this.list=o.data.data.sginBitMap;
+                                this.loading=false
+                                
+                            }
+                            else {
+                                this.$alert(o.data.msg, '警告⚠️', {
+                                        confirmButtonText: '确定',
+                                    });
+                            }
+                        }).
+                        catch(err=>{
+                                this.$alert('你没有权限', '警告⚠️', {
+                                        confirmButtonText: '确定',
+                                    });
+                        })
+                },
+                //参数进行筛选
+                GetQueryString(name) {
+                    var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+                    var r = window.location.search.substr(1).match(reg);//search,查询？后面的参数，并匹配正则
+                    if (r != null) return unescape(r[2]); return null;
+                },
+                //用户登录
+                userLogin(code, callBackHandler) {
+                    axios.get(this.basePath + "/api/Passport/token", {
+                        params: {
+                            code: code
+                        }
+                    })
+                        .then(o => {
+                            if (o.data.code == 200) {
+                                let expireAt = this.getToken(o.data.data);
+                                localStorage.setItem('token', o.data.data);
+                                localStorage.setItem('expireAt', expireAt);
+                                if (callBackHandler) {
+                                    callBackHandler();
+                                }
+                            }
+                            else {
+                                console.log(o.data.msg);
+                            }
+                        }).
+                        catch(function (err) {
+                            console.log(err);
+                        })
+                },
+                getToken(token) {
+                    if (token) {
+                        let tokens = token.split('.');
+                        if (tokens.length = 3) {
+                            var decodedData = JSON.parse(window.atob(tokens[1]));
+                            return decodedData.exp;
+                        }
+                    }
+                    return null;
+                },
+            },
+            //created:在模板渲染成html前调用，即通常初始化某些属性值，然后再渲染成视图。相当于angular.js中的初始化
+            created: function () {
+                this.Init()
+                //this.getBaseInfo();
+            }
+    
+        })
+    </script>
+</body>
+</html>

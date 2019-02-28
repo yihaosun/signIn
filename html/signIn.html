@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>签到活动</title>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0,minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="../css/element_index.css">
+    <link rel="stylesheet" href="../css/signIn.css">
+
+<body>
+    <div id='signIn_wrap'>
+        <div class='spinner' v-if="loading">
+            <div class="double-bounce1"></div>
+            <div class="double-bounce2"></div>
+        </div>
+        <img src='../img/bg.png' class="backgroundimg" />
+        <div class='body_wrap' v-if="!loading" v-cloak>
+            <div class='activity_rules_wrap'>
+                <div class='activity_rules'>
+                    <a @click='goActivity_rules' style='text-decoration: none;color: white;'>活动规则</a>
+                </div>
+            </div>
+            <div class='calendar_outside'>
+                <div class='calendar_wrap'>
+                    <div class='calendar'>
+                        <div class='date_wrap' v-for="(item,index) in list" :key="index">
+                            <div class='data_day' v-if="item=='1'">
+                                {{index+1}}
+                            </div>
+                            <div class='nodate_day' v-else>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class='btn_wrap'>
+                <div class='exchange_wrap flex-1'>
+                    <button class='button_style'  @click='exchange()'>兑换奖品</button>
+                    <el-dialog title="兑换" width="80%" :visible.sync="dialogVisible">
+                        <p>点击右下角图标，添加客服，将该兑换的二维码发给客服</p>
+                        <qrcode style='height: 150px;width: 150px;' :value='codeInfo'></qrcode>
+                        <span slot="footer" class="dialog-footer">
+                            <el-button type="primary" @click="dialogVisible = false">确 定</el-button>
+                        </span>
+                    </el-dialog>
+                </div>
+                <div class='sign_wrap flex-1'>
+                    <button class='button_style'  @click='signIn()'>每日签到</button>
+                </div>
+            </div>
+            <div style="position: fixed;bottom: 140px;right: -8px; z-index: 100;" @click='getKefu()'>
+                <span style="display: block;color: rgb(255, 255, 255);text-align: center;">
+                    <img src="../img/header.png" style='width: 50px; border-radius: 50%;'></img>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <script src='../js/vue.js'></script>
+    <script src='../js/element_index.js'></script>
+    <script src='../js/axios.min.js'></script>
+    <script src='../js/qs.min.js'></script>
+    <script src='../js/vue-qrcode.min.js'></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function () {
+            var Vue = window.Vue;
+            var VueQrcode = window.VueQrcode;
+            Vue.component('qrcode', VueQrcode);
+            new Vue({
+                el: "#signIn_wrap",
+                data: {
+                    list: '',
+                    nowDate: '',
+                    dialogVisible: false,
+                    basePath: "http://www.run4u.cn:1002",
+                    codeInfo: '',
+                    loading: true
+                },
+                methods: {
+                    //出始化
+                    Init() {
+                        // 获取连接是否是推荐连接是的话判断是否是微信授权连接
+                        // 判断方法就是有没有code，如果没有code说明不是微信授权链接，那么就需要先进行注册码保存，
+                        // 之后再授权给微信这个时候有code了但是没有注册码了，所有有code就不进入注册码验证
+                        // 微信授权后再querystring上会带上code参数用于授权
+                        let code = this.getQueryString('code');
+                        this.getOpenId(code);
+                    },
+                    getQueryString: function (name) {
+                        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+                        var r = window.location.search.substr(1).match(reg);  //获取url中"?"符后的字符串并正则匹配
+                        var context = "";
+                        if (r != null)
+                            context = r[2];
+                        reg = null;
+                        r = null;
+                        return context == null || context == "" || context == "undefined" ? "" : context;
+                    },
+                    getOpenId(code) {
+                        if (!this.isAuthenticated()) {
+                            let useragent = navigator.userAgent.toLowerCase();
+                            if (useragent.match(/micromessenger/i) != null) {
+                                if (!code) {
+                                    //code不存在去获取code
+                                    let currentUrl = encodeURIComponent(window.location.href);
+                                    let state = Math.floor(Math.random() * 10000000000000);
+                                    //放入本地缓存
+                                    localStorage.setItem('state', state);
+                                    //这里的跳转地址要换一下
+                                    window.location.href = `http://www.run4u.cn/get-weixin-code.html?appid=wxc033600ccb6a6abf&redirect_uri=${currentUrl}&response_type=code&scope=snsapi_userinfo&state=${state}#wechat_redirect`;
+                                } else {
+                                    //先通过本地缓存获取state
+                                    let states1 = localStorage.getItem('state');
+                                    //   alert(`states1:${states1}`);
+                                    let urlState = this.getQueryString('state');
+                                    // alert(`urlState:${urlState}`);
+                                    if (states1 == urlState) {
+                                        //code存在去获取openid
+                                        this.userLogin(code, () => {
+                                            this.getDate();
+                                        })
+                                    }
+                                    else {
+                                        //某些机型无法获取本地，需要重启手机
+                                        //放入本地缓存
+                                        let waring = '警告';
+                                        localStorage.setItem('waring', waring);
+                                        let result = localStorage.getItem('waring');
+                                        if (result) {
+                                            let baseurl = (window.location.href).split('#')[0].split('?')[0];
+                                            window.location.href = baseurl;
+                                        } else {
+                                            super.showAlert(this.alertCtrl, '手机问题，请重启手机');
+                                        }
+                                    }
+                                }
+                            } else {
+                                // if (this.ISDEBUG) {
+                                // let openId = '12345';
+                                // this.userTestLogin(openId, () => {
+                                //     this.getDate();
+                                // })
+                                // } else {
+                                this.$alert('请在微信中打开', '警告⚠️', {
+                                    confirmButtonText: '确定',
+                                });
+                                // }
+                            }
+                        }
+                        else {
+                            //获取数据
+                            this.getDate();
+                        }
+
+                    },
+                    //测试用户登录
+                    userTestLogin(openId, callBackHandler) {
+                        axios.get(this.basePath + "/api/Passport/token-openid", {
+                            params: {
+                                openId: openId
+                            }
+                        })
+                            .then(o => {
+                                if (o.data.code == 200) {
+                                    let expireAt = this.getToken(o.data.data);
+                                    localStorage.setItem('token', o.data.data);
+                                    localStorage.setItem('expireAt', expireAt);
+                                    if (callBackHandler) {
+                                        callBackHandler();
+                                    }
+                                }
+                                else {
+                                    console.log(o.data.msg);
+                                }
+                            }).
+                            catch(function (err) {
+                                console.log(err);
+                            })
+                    },
+                    //用户登录
+                    userLogin(code, callBackHandler) {
+                        axios.get(this.basePath + "/api/Passport/token", {
+                            params: {
+                                code: code
+                            }
+                        })
+                            .then(o => {
+                                if (o.data.code == 200) {
+                                    let expireAt = this.getToken(o.data.data);
+                                    localStorage.setItem('token', o.data.data);
+                                    localStorage.setItem('expireAt', expireAt);
+                                    if (callBackHandler) {
+                                        callBackHandler();
+                                    }
+                                }
+                                else {
+                                    console.log(o.data.msg);
+                                }
+                            }).
+                            catch(function (err) {
+                                console.log(err);
+                            })
+                    },
+                    //判断token是否过期
+                    isAuthenticated() {
+                        let a = localStorage.getItem("expireAt");
+                        if (a != null && (Number(a) * 1000) > (new Date()).valueOf()) {
+                            return localStorage.getItem('token') != null;
+                        } else {
+                            //登录出去，并且删除缓存中的token
+                            localStorage.removeItem('token');
+                            localStorage.removeItem('expireAt');
+                            return false;
+                        }
+                    }
+                    ,
+                    //签到
+                    signIn() {
+                        if (this.list.charAt(this.nowDate - 1) == '1') {
+                            this.$alert('小伙伴今天已经签到了，明天再来签', '签到', {
+                                confirmButtonText: '确定',
+                            });
+                        } else {
+                            let token = localStorage.getItem("token");
+                            console.log(token)
+                            axios.post(this.basePath + "/api/UserSgin/sgin",
+                                {
+                                    //传递的参数
+                                }, {
+                                    headers: {
+                                        'Authorization': 'Bearer ' + token,
+                                    }
+                                }
+                            )
+                                .then(o => {
+                                    if (o.data.code == 200) {
+                                        this.$alert('签到成功', '签到', {
+                                            confirmButtonText: '确定',
+                                            //  回调函数
+                                            callback: action => {
+                                                var a = this.list.split('');
+                                                a.splice(this.nowDate - 1, 1, '1');
+                                                var b = a.join('');
+                                                this.list = b;
+                                            }
+                                        });
+                                    }
+                                    else {
+                                        console.log(o.message);
+                                    }
+                                }).
+                                catch(function (err) {
+                                    console.log(err);
+                                })
+                        }
+                    },
+                    //活动规则
+                    goActivity_rules() {
+                        this.$alert('', '活动规则', {
+                            message: "<p>1.活动时间:<span style='color:red'>2019年3月1日-5月31日</span>（在活动时间内，资源消耗完则活动自动结束);</p><div><p>2.活动规则:</p><p style='text-indent: 1rem;'>1:在活动时间内，用户一个自然月内成功签到7天，可获得1.88元现金红包，成功签到15天可获得6.88元现金红包，成功签到30天可获得12.88元现金红包。相关奖励添加客服微信yihuige2017审核通过后发放，先到先得，发完即止；</p><p style='text-indent:1rem'>2:用户签到天数每个自然月清零,下个自然月重新累计;</p><p style='text-indent:1rem'>3:签到活动规则会不定期进行调整，请随时关注</p></div><div>4.活动更多规则详询客服</div>",
+                            dangerouslyUseHTMLString: true,
+                            confirmButtonText: '确定',
+                        });
+                    },
+                    //兑换奖品
+                    exchange() {
+                        var a = (this.list.match(/1/g) || []).length;
+                        if (a < 7) {
+                            this.$alert('小伙伴，你还没达到累计的天数！', '兑换', {
+                                confirmButtonText: '确定',
+                            });
+                        } else {
+                            let myDate = new Date();
+                            let year = myDate.getFullYear();//获取年
+                            let month = myDate.getMonth() + 1;//获取月
+                            month = (month < 10 ? "0" + month : month);
+                            let yearMonth = (year.toString() + month.toString());
+                            let token = localStorage.getItem("token");
+                            axios.get(this.basePath + "/api/UserSgin/award-qrcode", {
+                                params: {
+                                    day: yearMonth
+                                },
+                                headers: {
+                                    'Authorization': 'Bearer ' + token,
+                                }
+
+                            })
+                                .then(o => {
+                                    if (o.data.code == 200) {
+                                        // console.log(o.data.data)
+                                        let otherUrl = this.basePath;
+                                        let day = o.data.data.day;
+                                        let sgin = o.data.data.sgin;
+                                        let uid = o.data.data.uid;
+                                        this.codeInfo = `${otherUrl}/html/admin.html?day=${day}&sgin=${sgin}&uid=${uid}`
+                                        this.dialogVisible = true;
+                                         //window.location.href=`../html/admin.html?day=${day}&sgin=${sgin}&uid=${uid}`
+                                    }
+                                    else {
+                                        console.log(o.data.msg);
+                                    }
+                                }).
+                                catch(function (err) {
+                                    console.log(err);
+                                })
+
+
+                        }
+                    },
+                    //获取客服二维码
+                    getKefu(){
+                        this.$alert('', '客服', {
+                                confirmButtonText: '确定',
+                                dangerouslyUseHTMLString: true,
+                                message:"<img src='../img/code.png' style='    width: 100%;'>"
+                            });
+                    },
+                    //获取当前的日期和天数
+                    getDate() {
+                        let myDate = new Date();
+                        let year = myDate.getFullYear();//获取年
+                        let month = myDate.getMonth() + 1;//获取月
+                        month = (month < 10 ? "0" + month : month);
+                        let yearMonth = (year.toString() + month.toString());
+                        this.nowDate = myDate.getDate();   //获取当前日期并赋值
+
+                        let token = localStorage.getItem("token");
+                        axios.get(this.basePath + "/api/UserSgin/get-sgin", {
+                            params: {
+                                day: yearMonth
+                            },
+                            headers: {
+                                'Authorization': 'Bearer ' + token,
+                            }
+
+                        })
+                            .then(o => {
+                                if (o.data.code == 200) {
+                                    this.list = o.data.data.sginBitMap;
+                                    this.loading = false;
+                                }
+                                else {
+                                    console.log(o.data.msg);
+                                }
+                            }).
+                            catch(function (err) {
+                                console.log(err);
+                            })
+
+                    },
+                    getToken(token) {
+                        if (token) {
+                            let tokens = token.split('.');
+                            if (tokens.length = 3) {
+                                var decodedData = JSON.parse(window.atob(tokens[1]));
+                                return decodedData.exp;
+                            }
+                        }
+                        return null;
+                    },
+
+                },
+                //created:在模板渲染成html前调用，即通常初始化某些属性值，然后再渲染成视图。相当于angular.js中的初始化
+                created: function () {
+                    this.Init();
+
+                }
+
+            })
+        })
+    </script>
+</body>
+
+</html>
